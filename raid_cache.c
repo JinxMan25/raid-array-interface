@@ -110,7 +110,7 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
       tracker = i;
     }
     //if disk and blocks id found in the cache, update the lastAccessed field and copy over the buffer
-    if ((cache.blocks[i].diskId == dsk) && (cache.blocks[i].blockId == blk)){
+    if ((cache.blocks[i].diskId == (int)dsk) && (cache.blocks[i].blockId == (int)blk)){
       cache.blocks[i].accessCounter = cache.lastAccessed;
       //memset(cache.blocks[i].buf, buf, 1024);
     }
@@ -149,7 +149,7 @@ void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk) {
   int i;
 
   for (i = 0; i < cache.currentSize; i++) {
-    if ((cache.blocks[i].diskId == dsk) && (cache.blocks[i].blockId == blk)) {
+    if ((cache.blocks[i].diskId == (int)dsk) && (cache.blocks[i].blockId == (int)blk)) {
       cache.blocks[i].accessCounter = cache.lastAccessed;
       cache.lastAccessed++;
 
