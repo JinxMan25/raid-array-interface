@@ -18,6 +18,19 @@
 #include <cmpsc311_util.h>
 #include <raid_cache.h>
 
+//data structures
+struct caches {
+  struct block blocks[TAG_CACHE_ITEMS];
+  int currentSize;
+};
+
+struct block {
+  int diskId;
+  int blockId;
+};
+
+struct caches cache;
+
 //
 // TAGLINE Cache interface
 
@@ -30,7 +43,14 @@
 // Outputs      : 0 if successful, -1 if failure
 
 int init_raid_cache(uint32_t max_items) {
+  int i;
 
+  for (i = 0; i < max_items){
+    cache.blocks[i].diskId = -1;
+    cache.blocks[i].blockId = -1;
+  }
+
+  cache.currentSize = max_items; 
 	// Return successfully
 	return(0);
 }
@@ -51,6 +71,16 @@ int close_raid_cache(void) {
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+// Function     : returns 
+// Description  : Clear all of the contents of the cache, cleanup
+//
+// Inputs       : none
+// Outputs      : o if successful, -1 if failure
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
 // Function     : put_raid_cache
 // Description  : Put an object into the block cache
 //
@@ -59,7 +89,8 @@ int close_raid_cache(void) {
 //                buf - the buffer to insert into the cache
 // Outputs      : 0 if successful, -1 if failure
 
-int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf)  {
+int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
+  
 
 	// Return successfully
 	return(0);
