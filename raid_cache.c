@@ -49,7 +49,7 @@ struct caches cache;
 int init_raid_cache(uint32_t max_items) {
   int i;
 
-  for (i = 0; i < max_items){
+  for (i = 0; i < max_items) {
     cache.blocks[i].diskId = -1;
     cache.blocks[i].blockId = -1;
   }
@@ -69,6 +69,17 @@ int init_raid_cache(uint32_t max_items) {
 // Outputs      : o if successful, -1 if failure
 
 int close_raid_cache(void) {
+  int i;
+
+  for (i = 0; i < cache.currentSize; i++) {
+    cache.blocks[i].diskId = -1;
+    cache.blocks[i].blockId = -1;
+    cache.blocks[i].accessCounter = 0;
+    memset(cache.blocks[i].buf, NULL, 1024);
+  }
+
+  cache.lastAccessed = 0;
+  cache.currentSize = 0;
 
 	// Return successfully
 	return(0);
