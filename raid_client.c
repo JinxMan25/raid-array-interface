@@ -46,7 +46,7 @@ unsigned short raid_network_port = 0; // Port of CRUD server
 
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
 
-    return(??);
+  return;
 
 }
 
