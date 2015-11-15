@@ -19,19 +19,20 @@
 #include <raid_cache.h>
 
 //data structures
-struct caches {
-  struct block blocks[TAG_CACHE_ITEMS];
-  int currentSize;
-  int maxSize;
-  int lastAccessed;
-};
-
 struct block {
   int diskId;
   int blockId;
   char buf[RAID_BLOCK_SIZE];
   int accessCounter;
 };
+
+struct caches {
+  struct block blocks[TAGLINE_CACHE_SIZE];
+  int currentSize;
+  int maxSize;
+  int lastAccessed;
+};
+
 
 struct caches cache;
 
@@ -49,7 +50,7 @@ struct caches cache;
 int init_raid_cache(uint32_t max_items) {
   int i;
 
-  for (i = 0; i < max_items) {
+  for (i = 0; i < max_items; i++) {
     cache.blocks[i].diskId = -1;
     cache.blocks[i].blockId = -1;
   }
@@ -71,11 +72,12 @@ int init_raid_cache(uint32_t max_items) {
 int close_raid_cache(void) {
   int i;
 
+  //for each cache item, set block and disk id to -1, set buf to NULL and accessed times to 0
   for (i = 0; i < cache.currentSize; i++) {
     cache.blocks[i].diskId = -1;
     cache.blocks[i].blockId = -1;
     cache.blocks[i].accessCounter = 0;
-    memset(cache.blocks[i].buf, NULL, 1024);
+   // memset(cache.blocks[i].buf, NULL, 1024);
   }
 
   cache.lastAccessed = 0;
@@ -84,15 +86,6 @@ int close_raid_cache(void) {
 	// Return successfully
 	return(0);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//
-// Function     : returns 
-// Description  : Clear all of the contents of the cache, cleanup
-//
-// Inputs       : none
-// Outputs      : o if successful, -1 if failure
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -112,29 +105,29 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
 
   //from start to for how ever many writes in the cache, look for disk and block and if found, update lastAccessed member and update the buffer in the cache
   for (i = 0; i < cache.currentSize; i++) {
-    if (cache.block[i].accessCounter < low) {
-      low = cache.block[i].accessCounter;                                      //keep track of the least accessed so that after this iteration, if there is no space in the cache, just replace the least recently used by using the 'tracker' as the index
+    if (cache.blocks[i].accessCounter < low) {
+      low = cache.blocks[i].accessCounter;                        //keep track of the least accessed so that after this iteration, if there is no space in the cache, just replace the least recently used by using the 'tracker' as the index
       tracker = i;
     }
-    //if disk and block id found in the cache, update the lastAccessed field and copy over the buffer
-    if ((cache.block[i].diskId == dsk) && (cache.block[i].blockId == blk)){
-      cache.block[i].accessCounter = cache.lastAccessed;
-      memset(cache.block[i].buf, buf, 1024);
+    //if disk and blocks id found in the cache, update the lastAccessed field and copy over the buffer
+    if ((cache.blocks[i].diskId == dsk) && (cache.blocks[i].blockId == blk)){
+      cache.blocks[i].accessCounter = cache.lastAccessed;
+      //memset(cache.blocks[i].buf, buf, 1024);
     }
   }
 
-  // If no item was found in the cache, and if there is space in the cache, just insert the new disk and block id into the cache
+  // If no item was found in the cache, and if there is space in the cache, just insert the new disk and blocks id into the cache
   if ((cache.maxSize - cache.currentSize) > cache.maxSize) {
-    cache.block[currentSize + 1].diskId = dsk;
-    cache.block[currentSize + 1].blockId = blk;
-    cache.block[currentSize + 1].accessCounter = cache.lastAccessed;
-    memset(cache.block[currentSize + 1].buf, buf, 1024);
+    cache.blocks[cache.currentSize + 1].diskId = dsk;
+    cache.blocks[cache.currentSize + 1].blockId = blk;
+    cache.blocks[cache.currentSize + 1].accessCounter = cache.lastAccessed;
+    //memset(cache.blocks[cache.currentSize + 1].buf, buf, 1024);
 
     cache.currentSize++;
   } else {                                            // Else, just freakin' replace the least recently used item in the cache!
-    cache.block[tracker].diskId = dsk;
-    cache.block[tracker].blockId = dsk;
-    memset(cache.block[tracker].buf, buf, 1024);
+    cache.blocks[tracker].diskId = dsk;
+    cache.blocks[tracker].blockId = dsk;
+    //memset(cache.blocks[tracker].buf, buf, 1024);
   }
 
   cache.lastAccessed++;
@@ -153,13 +146,14 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
 // Outputs      : pointer to cached object or NULL if not found
 
 void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk) {
+  int i;
 
   for (i = 0; i < cache.currentSize; i++) {
-    if ((cache.block[i].diskId == dsk) && (cache.block[i].blockId == blk)) {
-      cache.block[i].accessCounter = cache.lastAccessed;
+    if ((cache.blocks[i].diskId == dsk) && (cache.blocks[i].blockId == blk)) {
+      cache.blocks[i].accessCounter = cache.lastAccessed;
       cache.lastAccessed++;
 
-      return cache.block[i];
+      return (void *)&cache.blocks[i];
     }
   }
 
