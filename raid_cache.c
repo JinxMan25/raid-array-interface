@@ -143,6 +143,17 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
 
 void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk) {
 
-	return(????);
+  for (i = 0; i < cache.currentSize; i++) {
+    if ((cache.block[i].diskId == dsk) && (cache.block[i].blockId == blk)) {
+      cache.block[i].accessCounter = cache.lastAccessed;
+      cache.lastAccessed++;
+
+      return cache.block[i];
+    }
+  }
+
+  cache.lastAccessed++;
+  return NULL;
+
 }
 
