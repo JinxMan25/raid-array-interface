@@ -81,22 +81,22 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
 
  send(socketfd, &op, sizeof(data), 0);
 
- recv(socketfd, &resp, sizeof(resp), 0);
+ recv(socketfd, &op, sizeof(resp), 0);
 
- if (sizeof(buf) != 0) {
-    send(socketfd, &op, sizeof(data), 0);
+ send(socketfd, &length, sizeof(length), 0);
 
-    recv(socketfd, &resp, sizeof(resp), 0);
+ recv(socketfd, &length, sizeof(length), 0);
 
-    send(socketfd, &op, sizeof(data), 0);
+ if (length != 0) {
+    send(socketfd, &buf, sizeof(data), 0);
 
-    recv(socketfd, &resp, sizeof(resp), 0);
+    recv(socketfd, &buf, sizeof(data), 0);
  }
 
- data.opCode = ntohll64(resp.opCode);
+ op = ntohll64(op);
 
 
-  return data.opCode;
+  return op;
 
 }
 
