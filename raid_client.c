@@ -24,8 +24,14 @@
 #include <cmpsc311_util.h>
 
 // Global data
-unsigned char *raid_network_address = NULL; // Address of CRUD server
-unsigned short raid_network_port = 0; // Port of CRUD server
+unsigned char *raid_network_address = RAID_DEFAULT_IP; // Address of CRUD server
+unsigned short raid_network_port = RAID_DEFAULT_PORT; // Port of CRUD server
+
+struct socketData {
+  RAIDOpCode opCode;
+  int Length;
+  void * Data;
+};
 
 //
 // Functions
@@ -45,8 +51,42 @@ unsigned short raid_network_port = 0; // Port of CRUD server
 // Outputs      : the response structure encoded as needed
 
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
+ struct sockaddr_in caddr; 
+ struct socketData data;
+ struct socketData resp;
+ int length;
+ int64_t socketfd;
 
-  return;
+ length = sizeof(buf);
+
+ caddr.sin_family = AF_INET;
+ caddr.sin_port = htons(raid_network_port);
+
+
+ //ASCII to Network which converts the dotted string to network value in the struct
+ inet_aton((const char*)raid_network_address, &(caddr.sin_addr));
+
+ socketfd = socket(AF_INET, SOCK_STREAM, 0);
+
+ if (connect(socketfd, (const struct sockaddr *)&caddr, sizeof(struct sockaddr)) == -1) {
+    return -1;
+ }
+
+ op = htonll64(op);
+ buf = htonll64(length);
+
+ data.opCode = op;
+ data.Length = length;
+ data.Data = &buf;
+
+ send(socketfd, &data, sizeof(data), 0);
+
+ recv(socketfd, &resp, sizeof(resp), 0);
+
+ data.opCode = ntohl(resp.opCode);
+
+
+  return data.opCode;
 
 }
 
