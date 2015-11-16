@@ -55,7 +55,7 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
  struct socketData data;
  struct socketData resp;
  int length;
- int64_t socketfd;
+ int64_t, socketfd, length;
 
  length = sizeof(buf);
 
@@ -73,17 +73,27 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
  }
 
  op = htonll64(op);
- buf = htonll64(length);
+ length = htonll64(length);
 
- data.opCode = op;
+ /*data.opCode = op;
  data.Length = length;
- data.Data = &buf;
+ data.Data = &buf;*/
 
- send(socketfd, &data, sizeof(data), 0);
+ send(socketfd, &op, sizeof(data), 0);
 
  recv(socketfd, &resp, sizeof(resp), 0);
 
- data.opCode = ntohl(resp.opCode);
+ if (sizeof(buf) != 0) {
+    send(socketfd, &op, sizeof(data), 0);
+
+    recv(socketfd, &resp, sizeof(resp), 0);
+
+    send(socketfd, &op, sizeof(data), 0);
+
+    recv(socketfd, &resp, sizeof(resp), 0);
+ }
+
+ data.opCode = ntohll64(resp.opCode);
 
 
   return data.opCode;
