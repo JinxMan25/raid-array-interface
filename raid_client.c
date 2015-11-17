@@ -51,6 +51,7 @@ struct socketData {
 // Outputs      : the response structure encoded as needed
 
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
+
  struct sockaddr_in caddr; 
  struct socketData data;
  struct socketData resp;
@@ -79,21 +80,23 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
  data.Length = length;
  data.Data = &buf;*/
 
+ //Send opcode and get a response from server
  send(socketfd, &op, sizeof(data), 0);
-
  recv(socketfd, &op, sizeof(resp), 0);
 
+ //Send the length and get a response from server
  send(socketfd, &length, sizeof(length), 0);
-
  recv(socketfd, &length, sizeof(length), 0);
 
+ //if length is not zero, send the buffer to the server
  if (length != 0) {
     send(socketfd, &buf, sizeof(data), 0);
-
     recv(socketfd, &buf, sizeof(data), 0);
  }
 
  op = ntohll64(op);
+
+ close(socketfd);
 
 
   return op;
