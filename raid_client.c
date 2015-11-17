@@ -53,10 +53,7 @@ struct socketData {
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
 
  struct sockaddr_in caddr; 
- struct socketData data;
- struct socketData resp;
- int length;
- int64_t, socketfd, length;
+ int64_t socketfd, length;
 
  length = sizeof(buf);
 
@@ -81,17 +78,34 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
  data.Data = &buf;*/
 
  //Send opcode and get a response from server
- send(socketfd, &op, sizeof(data), 0);
- recv(socketfd, &op, sizeof(resp), 0);
+ if (send(socketfd, &op, sizeof(op), 0) != sizeof(length)) {
+    logMessage(LOG_ERROR_LEVEL, "Opcode send failed!");
+    return -1;
+ }
+ if (recv(socketfd, &op, sizeof(op), 0) < 0){
+    logMessage(LOG_ERROR_LEVEL, "Opcode receive failed!");
+ }
 
  //Send the length and get a response from server
- send(socketfd, &length, sizeof(length), 0);
- recv(socketfd, &length, sizeof(length), 0);
+ if (send(socketfd, &length, sizeof(length), 0) != sizeof(length)) {
+	logMessage(LOG_ERROR_LEVEL, "Send 'length' failed!");
+  return -1;
+ }
+ if (recv(socketfd, &length, sizeof(length), 0) < 0) {
+	logMessage(LOG_ERROR_LEVEL, "Receive from length failed!");
+  return -1;
+ }
 
  //if length is not zero, send the buffer to the server
  if (length != 0) {
-    send(socketfd, &buf, sizeof(data), 0);
-    recv(socketfd, &buf, sizeof(data), 0);
+    if (send(socketfd, &buf, sizeof(buf), 0) != sizeof(buf)){
+      logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
+      return -1;
+    }
+    if (recv(socketfd, &buf, sizeof(buf), 0) < 0){
+      logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
+      return -1;
+    }
  }
 
  op = ntohll64(op);
