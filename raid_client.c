@@ -82,7 +82,7 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
     logMessage(LOG_ERROR_LEVEL, "Opcode send failed!");
     return -1;
  }
- if (recv(socketfd, &op, sizeof(op), 0) < 0){
+ if (recv(socketfd, &op, sizeof(op), 0) < 0) {
     logMessage(LOG_ERROR_LEVEL, "Opcode receive failed!");
  }
 
@@ -98,11 +98,11 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
 
  //if length is not zero, send the buffer to the server
  if (length != 0) {
-    if (send(socketfd, &buf, sizeof(buf), 0) != sizeof(buf)){
+    if (send(socketfd, &buf, sizeof(buf), 0) != sizeof(buf)) {
       logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
       return -1;
     }
-    if (recv(socketfd, &buf, sizeof(buf), 0) < 0){
+    if (recv(socketfd, &buf, sizeof(buf), 0) < 0) {
       logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
       return -1;
     }
