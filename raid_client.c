@@ -78,25 +78,29 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
  data.Data = &buf;*/
 
  //Send opcode and get a response from server
- if (send(socketfd, &op, sizeof(op), 0) != sizeof(length)) {
+ if (send(socketfd, &op, sizeof(op), 0) != sizeof(op)) {
     logMessage(LOG_ERROR_LEVEL, "Opcode send failed!");
     return -1;
  }
 
- if (recv(socketfd, &op, sizeof(op), 0) < 0) {
+  logMessage(LOG_INFO_LEVEL, "Raid OpCode SENT!");
+
+ /*if (recv(socketfd, &op, sizeof(op), 0) < 0) {
     logMessage(LOG_ERROR_LEVEL, "Opcode receive failed!");
- }
+ }*/
+  logMessage(LOG_INFO_LEVEL, "Waiting");
 
  //Send the length and get a response from server
  if (send(socketfd, &length, sizeof(length), 0) != sizeof(length)) {
 	logMessage(LOG_ERROR_LEVEL, "Send 'length' failed!");
   return -1;
  }
+  logMessage(LOG_INFO_LEVEL, "Length sent!");
 
- if (recv(socketfd, &length, sizeof(length), 0) < 0) {
+ /*if (recv(socketfd, &length, sizeof(length), 0) < 0) {
 	logMessage(LOG_ERROR_LEVEL, "Receive from length failed!");
   return -1;
- }
+ }*/
 
  //if length is not zero, send the buffer to the server
  if (length != 0) {
@@ -104,15 +108,16 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
       logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
       return -1;
     }
+  logMessage(LOG_INFO_LEVEL, "waiting on buffer response!");
     if (recv(socketfd, &buf, sizeof(buf), 0) < 0) {
       logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
       return -1;
     }
  }
 
- op = ntohll64(op);
+  op = ntohll64(op);
 
- close(socketfd);
+  close(socketfd);
 
 
   return op;

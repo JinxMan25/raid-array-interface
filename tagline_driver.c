@@ -367,22 +367,22 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
 
           // This is the backup write
           logMessage(LOG_INFO_LEVEL, "Fresh write to block in Backup Disk");
-          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, (currentDisk == 16) ? 0 : (currentDisk + 1), 0, 0, RAID_DISKBLOCKS - disks[(currentDisk == 16) ? 0 : (currentDisk + 1)].currentSize), &buf[i*RAID_BLOCK_SIZE]);
+          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1), 0, 0, RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize), &buf[i*RAID_BLOCK_SIZE]);
           if (status_check_helper(writeResOp, "Fresh WRITE to Backup Disk")){
             return -1;
           }  else {
             // This is round robin, so if currentDisk is 16, go to Disk 0 to store backup
-            taglines[tag].taglineBlocks[bnum + i][2] = (currentDisk == 16) ? 0 : (currentDisk + 1);
-            taglines[tag].taglineBlocks[bnum + i][3] = RAID_DISKBLOCKS - disks[(currentDisk == 16) ? 0 : (currentDisk + 1)].currentSize;
+            taglines[tag].taglineBlocks[bnum + i][2] = (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1);
+            taglines[tag].taglineBlocks[bnum + i][3] = RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize;
           }
 
           //on successfull writes, decrease currentsize of disks that the primary block and backup block was written to so that on the next write, it writes to the next block in 'disks[currentDisk]'
           disks[currentDisk].currentSize--;
-          disks[(currentDisk == 16) ? 0 : (currentDisk + 1)].currentSize--;
+          disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize--;
 
 
           // This is round-robin so icrement currentDisk to go to the next disk. If it is 16, go to disk 0. Here is it -1 because currentDisk gets increment in the next line
-          currentDisk = (currentDisk == 16) ? -1: currentDisk;
+          currentDisk = (currentDisk == (RAID_DISKS - 1)) ? -1: currentDisk;
           currentDisk++;
 
           break;
@@ -413,10 +413,12 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
       }
 
       //If while loop looped through all disk and is at the end and hasSpace equal 0, that means there was no space in any disk...so return -1
-      if (currentDisk == 16 && (hasSpace == 0)){
+      if (currentDisk == (RAID_DISKS - 1) && (hasSpace == 0)){
+
+        logMessage(LOG_INFO_LEVEL, "No space on disks!");
         return -1;
       }
-      currentDisk = (currentDisk >= 16) ? -1 : currentDisk;
+      currentDisk = (currentDisk >= (RAID_DISKS - 1)) ? -1 : currentDisk;
       currentDisk++;
     }
   }
