@@ -115,6 +115,7 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     if ((cache.blocks[i].diskId == (int)dsk) && (cache.blocks[i].blockId == (int)blk)){
       cache.blocks[i].accessCounter = cache.lastAccessed;
       memset(cache.blocks[i].buf, *(char*)buf, 1024);
+
     }
   }
 

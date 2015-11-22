@@ -15,8 +15,8 @@
 // Project Includes
 #include "raid_bus.h"
 #include "tagline_driver.h"
-#include "raid_cache.h"
-#include "raid_network.h"
+#include <raid_cache.h>
+#include <raid_network.h>
 
 struct cache_statistics {
   long int inserts;
