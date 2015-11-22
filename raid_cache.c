@@ -27,7 +27,7 @@ struct block {
 };
 
 struct caches {
-  struct block blocks[TAGLINE_CACHE_SIZE];
+  struct block *blocks;
   int currentSize;
   int maxSize;
   int lastAccessed;
@@ -49,6 +49,8 @@ struct caches cache;
 
 int init_raid_cache(uint32_t max_items) {
   int i;
+
+  cache.blocks = malloc(max_items * sizeof(struct block));
 
   for (i = 0; i < max_items; i++) {
     cache.blocks[i].diskId = -1;
@@ -112,7 +114,7 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     //if disk and blocks id found in the cache, update the lastAccessed field and copy over the buffer
     if ((cache.blocks[i].diskId == (int)dsk) && (cache.blocks[i].blockId == (int)blk)){
       cache.blocks[i].accessCounter = cache.lastAccessed;
-      //memset(cache.blocks[i].buf, buf, 1024);
+      memset(cache.blocks[i].buf, *(char*)buf, 1024);
     }
   }
 
@@ -121,13 +123,13 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     cache.blocks[cache.currentSize + 1].diskId = dsk;
     cache.blocks[cache.currentSize + 1].blockId = blk;
     cache.blocks[cache.currentSize + 1].accessCounter = cache.lastAccessed;
-    //memset(cache.blocks[cache.currentSize + 1].buf, buf, 1024);
+    memset(cache.blocks[cache.currentSize + 1].buf, *(char *)buf, 1024);
 
     cache.currentSize++;
   } else {                                            // Else, just freakin' replace the least recently used item in the cache!
     cache.blocks[tracker].diskId = dsk;
     cache.blocks[tracker].blockId = dsk;
-    //memset(cache.blocks[tracker].buf, buf, 1024);
+    memset(cache.blocks[tracker].buf, *(char *)buf, 1024);
   }
 
   cache.lastAccessed++;

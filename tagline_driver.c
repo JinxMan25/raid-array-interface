@@ -15,7 +15,15 @@
 // Project Includes
 #include "raid_bus.h"
 #include "tagline_driver.h"
+#include "raid_cache.h"
+#include "raid_network.h"
 
+struct cache_statistics {
+  long int inserts;
+  long int hits;
+  long int gets;
+  long int misses;
+};
 
 //This is the structure for a raid disk, and 'container' contains the 8192 blocks
 struct tagline {
@@ -31,6 +39,7 @@ int currentDisk = 0;
 int gmaxLines;
 
 struct raid_disks disks[RAID_DISKS];
+struct cache_statistics stats;
 
 
 //Globals
@@ -132,6 +141,8 @@ RAIDOpCode create_raid_request(uint64_t request_type, uint64_t num_blocks, uint6
 // Outputs      : 0 if successful, -1 if failure
   
 int tagline_driver_init(uint32_t maxlines) {
+
+  init_raid_cache(TAGLINE_CACHE_SIZE); 
 
   //assign global var 'gmaxlines' to maxlines so that it can be used in raid_disk_signal()
   gmaxLines = maxlines;
@@ -350,6 +361,7 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
           } else {
             taglines[tag].taglineBlocks[bnum + i][0] = currentDisk;
             taglines[tag].taglineBlocks[bnum + i][1] = RAID_DISKBLOCKS - disks[currentDisk].currentSize;
+            put_raid_cache((RAIDDiskID)currentDisk, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk].currentSize), &buf[i*RAID_BLOCK_SIZE]);
           }
 
 
