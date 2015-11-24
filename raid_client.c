@@ -119,17 +119,17 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
   //if length is not zero, send the buffer to the server
   if (length != 0) {
 
-    if (send(socketfd, (char*)&buf, sizeof(buf), 0) != sizeof(buf)) {
+    if (send(socketfd, (char*)buf, sizeof(buf), 0) != sizeof(buf)) {
       logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
       return -1;
     }
 
     logMessage(LOG_INFO_LEVEL, "waiting on buffer response!");
 
-    if (recv(socketfd, (char *)&buf, sizeof(buf), 0) < 0) {
+    /*if (recv(socketfd, (char*)buf, sizeof(buf), 0) < 0) {
       logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
       return -1;
-    }
+    }*/
 
  }
 
