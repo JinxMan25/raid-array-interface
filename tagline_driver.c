@@ -144,6 +144,8 @@ int tagline_driver_init(uint32_t maxlines) {
 
   init_raid_cache(TAGLINE_CACHE_SIZE); 
 
+  establish_connection();
+
   //assign global var 'gmaxlines' to maxlines so that it can be used in raid_disk_signal()
   gmaxLines = maxlines;
   int i,j;
@@ -217,7 +219,7 @@ int tagline_read(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char 
     logMessage(LOG_INFO_LEVEL, "Trying to read Disk : %d  Block: %d", primaryDisk, primaryDiskBlock);
 
     //Call the raid bus to read the buffer into 'buf' in 1024 chunks
-    readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), &buf[i*RAID_BLOCK_SIZE]);
+    readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), (void*)&buf[i*RAID_BLOCK_SIZE]);
     if (status_check_helper(readResp, "READ")){
       return -1;
     }
@@ -256,7 +258,7 @@ int raid_disk_signal(){
     extract_raid_response(statusResp);
     // if disk fails, format the disk 
     if (respOpCode[5] == RAID_DISK_FAILED) {
-      formatResp = client_raid_bus_request(create_raid_request(RAID_FORMAT, RAID_DISKBLOCKS/RAID_TRACK_BLOCKS, i, 0, 0, 0), buf);
+      formatResp = client_raid_bus_request(create_raid_request(RAID_FORMAT, RAID_DISKBLOCKS/RAID_TRACK_BLOCKS, i, 0, 0, 0), (void *)buf);
       //if it is successful, go through each block of the disk that was written to and brute force search against the tagline data mapping
       if (status_check_helper(formatResp, "Format disk")){
         return 1;
@@ -286,9 +288,9 @@ int raid_disk_signal(){
 
                 //if primary disk and block was found, then read from the corresponding backup disk and backup block else just read from corresponding primary disk and block
                 if ((primaryDisk == i) && (primaryDiskBlock == j)){
-                  readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, backUpDisk, 0, 0, backUpDiskBlock), buf);
+                  readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, backUpDisk, 0, 0, backUpDiskBlock), (void*)buf);
                 } else {
-                  readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), buf);
+                  readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), (void*)buf);
                 }
 
                 // if read into the buffer was succesfull, write the buffer to the failed disk and block to recover
@@ -297,7 +299,7 @@ int raid_disk_signal(){
                 } else {
 
                   logMessage(LOG_INFO_LEVEL, "Recovering diskblock...");
-                  writeResp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, i, 0, 0, j), buf);
+                  writeResp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, i, 0, 0, j), (void*)buf);
                   if (status_check_helper(writeResp, "WRITE TO FAILED DISK")){
                   } else {
                     logMessage(LOG_INFO_LEVEL, "Recovered DiskBlock!");
@@ -367,7 +369,7 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
 
           // This is the backup write
           logMessage(LOG_INFO_LEVEL, "Fresh write to block in Backup Disk");
-          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1), 0, 0, RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize), &buf[i*RAID_BLOCK_SIZE]);
+          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1), 0, 0, RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize), (void*)&buf[i*RAID_BLOCK_SIZE]);
           if (status_check_helper(writeResOp, "Fresh WRITE to Backup Disk")){
             return -1;
           }  else {
@@ -392,7 +394,7 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
               i, tag, bnum + i);
 
           //fetch the primary disk and disk block from tagline data structure to overwrite
-          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, taglines[tag].taglineBlocks[bnum + i][0], 0, 0, taglines[tag].taglineBlocks[bnum + i][1]), &buf[i*RAID_BLOCK_SIZE]);
+          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, taglines[tag].taglineBlocks[bnum + i][0], 0, 0, taglines[tag].taglineBlocks[bnum + i][1]), (void*)&buf[i*RAID_BLOCK_SIZE]);
 
           if (status_check_helper(writeResOp, "Overwrite to Primary disk")){
             return -1;
@@ -400,7 +402,7 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
 
           logMessage(LOG_INFO_LEVEL, "Overwrite to block in Backup Disk");
           //fetch the back up disk and disk block from tagline data structure to overwrite
-          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, taglines[tag].taglineBlocks[bnum + i][2], 0, 0, taglines[tag].taglineBlocks[bnum + i][3]), &buf[i*RAID_BLOCK_SIZE]);
+          writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, taglines[tag].taglineBlocks[bnum + i][2], 0, 0, taglines[tag].taglineBlocks[bnum + i][3]), (void*)&buf[i*RAID_BLOCK_SIZE]);
           if (status_check_helper(writeResOp, "Overwrite to Backup disk")){
             return -1;
           } 
@@ -458,6 +460,8 @@ int tagline_close(void) {
   if (status_check_helper(closeResp, "CLOSE")){
     return -1;
   }
+
+  close_connection();
 
 	// Return successfully
 	logMessage(LOG_INFO_LEVEL, "TAGLINE storage device: closing completed.");

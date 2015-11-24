@@ -27,6 +27,8 @@ extern unsigned short raid_network_port;     // Port of RAID server
 // Functional Prototypes
 
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf);
+int establish_connection();
+void close_connection();
     // This is the implementation of the client operation (raid_client.c)
 
 #endif
