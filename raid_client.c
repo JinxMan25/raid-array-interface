@@ -124,7 +124,7 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
       return -1;
     }
 
-    logMessage(LOG_INFO_LEVEL, "waiting on buffer response!");
+    //logMessage(LOG_INFO_LEVEL, "waiting on buffer response!");
 
     /*if (recv(socketfd, (char*)buf, sizeof(buf), 0) < 0) {
       logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");

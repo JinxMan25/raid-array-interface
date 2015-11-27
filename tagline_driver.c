@@ -219,7 +219,7 @@ int tagline_read(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char 
     logMessage(LOG_INFO_LEVEL, "Trying to read Disk : %d  Block: %d", primaryDisk, primaryDiskBlock);
 
     //Call the raid bus to read the buffer into 'buf' in 1024 chunks
-    readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), (void*)&buf[i*RAID_BLOCK_SIZE]);
+    readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), &buf[i*RAID_BLOCK_SIZE]);
     if (status_check_helper(readResp, "READ")){
       return -1;
     }
