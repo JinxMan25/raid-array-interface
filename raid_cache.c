@@ -31,10 +31,28 @@ struct caches {
   int currentSize;
   int maxSize;
   int lastAccessed;
+  int prime;
 };
 
 
 struct caches cache;
+
+
+int check_prime(int num){
+  int i, flag=0;
+    for (i=2;i <=num/2; ++i) {
+      if (num%i==0) {
+        flag=1;
+        break;
+      }
+    }
+    if (flag==0) {
+      return 1;
+    }
+    else {
+      return -1;
+    }
+}
 
 //
 // TAGLINE Cache interface
@@ -55,6 +73,16 @@ int init_raid_cache(uint32_t max_items) {
   for (i = 0; i < max_items; i++) {
     cache.blocks[i].diskId = -1;
     cache.blocks[i].blockId = -1;
+  }
+
+  i = 0;
+
+  while (1) {
+    if (check_prime(max_items - i)) {
+      cache.prime = (max_items - i);
+      break;
+    }
+    i++;
   }
 
   cache.currentSize = 0; 
@@ -102,8 +130,21 @@ int close_raid_cache(void) {
 
 int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
   int i;
+  int idx;
   int low = 999;
   int tracker;
+
+  idx = ((dsk + blk)*(113)) % cache.maxSize;
+
+
+  while (1){
+    if (cache.blocks[idx].diskId == -1){
+    }
+  }
+  
+  //cache eviction, find the least recently used to evict
+  if ((cache.maxSize - cache.currentSize) <= 0){
+  }
 
   //from start to for how ever many writes in the cache, look for disk and block and if found, update lastAccessed member and update the buffer in the cache
   for (i = 0; i < cache.currentSize; i++) {
@@ -115,7 +156,6 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     if ((cache.blocks[i].diskId == (int)dsk) && (cache.blocks[i].blockId == (int)blk)){
       cache.blocks[i].accessCounter = cache.lastAccessed;
       memset(cache.blocks[i].buf, *(char*)buf, 1024);
-
     }
   }
 
