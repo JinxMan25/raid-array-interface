@@ -54,7 +54,6 @@ int establish_connection() {
   if (connect(socketfd, (const struct sockaddr *)&caddr, sizeof(struct sockaddr)) == -1) {
     return -1;
   }
-  return 1;
 }
 
 //
@@ -75,62 +74,64 @@ int establish_connection() {
 // Outputs      : the response structure encoded as needed
 
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
-  int request_type = extract_raid_response(op, "REQUEST_TYPE");
+
+  length = sizeof(buf);
+
 
   op = htonll64(op);
 
+  /*data.opCode = op;
+  data.Length = length;
+  data.Data = &buf;*/
+ 
   //Send opcode and get a response from server
   if (send(socketfd, &op, sizeof(op), 0) != sizeof(op)) {
      logMessage(LOG_ERROR_LEVEL, "Opcode send failed!");
      return -1;
   }
  
-  logMessage(LOG_INFO_LEVEL, "Raid OpCode SENT!");
+   logMessage(LOG_INFO_LEVEL, "Raid OpCode SENT!");
  
   /*if (recv(socketfd, &op, sizeof(op), 0) < 0) {
      logMessage(LOG_ERROR_LEVEL, "Opcode receive failed!");
   }*/
   logMessage(LOG_INFO_LEVEL, "Waiting");
 
-  if (request_type == 4) {
-    length = RAID_BLOCK_SIZE;
+  if (buf == 0){
+    length = 0;
   }
+
   lengthNBO = htonll64(length);
 
   //Send the length and get a response from server
-  logMessage(LOG_INFO_LEVEL, "Trying to send length!");
   if (send(socketfd, &lengthNBO, sizeof(lengthNBO), 0) != sizeof(lengthNBO)) {
     logMessage(LOG_ERROR_LEVEL, "Send 'length' failed!");
     return -1;
   }
-  
-  if (ntohll64(lengthNBO) > 0) {
-    logMessage(LOG_INFO_LEVEL, "Trying to recv buffer!");
-    if (recv(socketfd, (char*)buf, sizeof(buf), 0) < 0){
-      logMessage(LOG_ERROR_LEVEL, "Receive from length failed!");
-      return -1;
-    }
-  } else if (length != 0) {
-    logMessage(LOG_INFO_LEVEL, "Trying to send buffer!");
-    if (send(socketfd, (char*)buf, sizeof(buf), 0) != sizeof(buf)) {
-      logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
-      return -1;
-    }
 
-    logMessage(LOG_INFO_LEVEL, "Waiting for buffer recv");
-
-    if (recv(socketfd, (char*)buf, sizeof(buf), 0) < 0) {
-      logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
-      return -1;
-    }
-  }
-
+  logMessage(LOG_INFO_LEVEL, "Length sent!");
  
   /*if (recv(socketfd, &length, sizeof(length), 0) < 0) {
  	logMessage(LOG_ERROR_LEVEL, "Receive from length failed!");
    return -1;
   }*/
  
+  //if length is not zero, send the buffer to the server
+  if (length != 0) {
+
+    if (send(socketfd, (char*)buf, sizeof(buf), 0) != sizeof(buf)) {
+      logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
+      return -1;
+    }
+
+    //logMessage(LOG_INFO_LEVEL, "waiting on buffer response!");
+
+    if (recv(socketfd, (char*)buf, sizeof(buf), 0) < 0) {
+      logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
+      return -1;
+    }
+
+ }
 
   op = ntohll64(op);
 
