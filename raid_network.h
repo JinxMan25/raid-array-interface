@@ -14,6 +14,7 @@
 
 // Project Include Files
 #include <raid_bus.h>
+#include <tagline_driver.h>
 
 // Defines
 #define RAID_DEFAULT_IP "127.0.0.1"

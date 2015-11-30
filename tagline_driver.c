@@ -44,7 +44,6 @@ struct cache_statistics stats;
 
 //Globals
 //initialize 5 structs for holding 5 disks
-uint32_t respOpCode[6];
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -53,8 +52,8 @@ uint32_t respOpCode[6];
 //
 // Inputs       : resp which is of type RAIDOpCode, and buf
 // Outputs      : returns void because it sets values in the global variable
-
-void extract_raid_response(RAIDOpCode resp) {
+int extract_raid_response(RAIDOpCode resp, char *part) {
+  uint32_t respOpCode[6];
 
   uint32_t block_ID = resp;
   respOpCode[5] = block_ID;
@@ -79,6 +78,14 @@ void extract_raid_response(RAIDOpCode resp) {
   uint32_t request_type = resp&0xff;
   respOpCode[0] = request_type;
 
+  if (strcmp(part, "STATUS") == 0) {
+    return respOpCode[4];
+  } else if (strcmp(part, "REQUEST_TYPE") == 0){
+    return respOpCode[0];
+  } else if (strcmp(part, "DISK_FAIL_CHECK") == 0){
+    return respOpCode[5];
+  }
+  return -1;
 }
 
 // Functions
@@ -94,10 +101,10 @@ void extract_raid_response(RAIDOpCode resp) {
 int status_check_helper(RAIDOpCode response, char *op) {
   int boolean = 0;
 
-    extract_raid_response(response);
+  int status = extract_raid_response(response, "STATUS");
 
     //if status is not equal to 0, that means the operation has failed
-    if (respOpCode[4] != 0) {
+    if (status != 0) {
       boolean = 1;
       logMessage(LOG_INFO_LEVEL, "%s HAS FAILED!\n", op);
     }
@@ -249,16 +256,18 @@ int raid_disk_signal(){
 
   int i,j, x, y, primaryDisk, primaryDiskBlock, backUpDisk, backUpDiskBlock, failedDiskCurrentSize, found;
   failedDiskCurrentSize = 0;
+  int disk_fail_status;
   char buf[RAID_BLOCK_SIZE];
   RAIDOpCode statusResp, formatResp, readResp, writeResp;
 
   //Check each disk if it failed or not
   for (i = 0; i < RAID_DISKS; i++) {
     statusResp = client_raid_bus_request(create_raid_request(RAID_STATUS, 0, i, 0, 0, 0), NULL);
-    extract_raid_response(statusResp);
+    disk_fail_status = extract_raid_response(statusResp, "DISK_FAIL_CHECK");
     // if disk fails, format the disk 
-    if (respOpCode[5] == RAID_DISK_FAILED) {
+    if (disk_fail_status == RAID_DISK_FAILED) {
       formatResp = client_raid_bus_request(create_raid_request(RAID_FORMAT, RAID_DISKBLOCKS/RAID_TRACK_BLOCKS, i, 0, 0, 0), (void *)buf);
+
       //if it is successful, go through each block of the disk that was written to and brute force search against the tagline data mapping
       if (status_check_helper(formatResp, "Format disk")){
         return 1;
