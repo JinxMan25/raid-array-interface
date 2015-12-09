@@ -88,35 +88,18 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
   lengthNBO = htonll64(length);
 
   //Send opcode and get a response from server
-  if (send(socketfd, &op, sizeof(op), 0) != sizeof(op)) {
+  if (write (socketfd, &op, sizeof(op)) != sizeof(op)){
     logMessage(LOG_ERROR_LEVEL, "Opcode send failed!");
     return -1;
   }
 
   //Send the length and get a response from server
-  if (send(socketfd, &lengthNBO, sizeof(lengthNBO), 0) != sizeof(lengthNBO)) {
+  if (write(socketfd, &lengthNBO, sizeof(lengthNBO)) != sizeof(lengthNBO)) {
     logMessage(LOG_ERROR_LEVEL, "Send 'length' failed!");
     return -1;
   }
 
   logMessage(LOG_INFO_LEVEL, "Sent length!");
-
-  if (extract_raid_response(ntohll64(op), "REQUEST_TYPE") == RAID_WRITE) {
-    if (send(socketfd, (char*)buf, sizeof(buf), 0) != sizeof(buf)) {
-      logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
-      return -1;
-    }
-    logMessage(LOG_INFO_LEVEL, "Buffer sent");
-  }
-
-  logMessage(LOG_INFO_LEVEL, "Waiting to receive op");
-
-  if (recv(socketfd, &op, sizeof(op), 0) < 0) {
-    logMessage(LOG_ERROR_LEVEL, "Opcode receive failed!");
-    return -1;
-  }
-
-  logMessage(LOG_INFO_LEVEL, "Opcode received");
 
   if (recv(socketfd, &lengthNBO, sizeof(lengthNBO), 0) < 0) {
     logMessage(LOG_ERROR_LEVEL, "Receive from length failed!");
@@ -125,16 +108,27 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
 
   recvLength = ntohll64(lengthNBO);
 
-  logMessage(LOG_INFO_LEVEL, "Length received");
+  //logMessage(LOG_INFO_LEVEL, "Received length from server!");
 
-  if (extract_raid_response(ntohll64(op), "REQUEST_TYPE") == RAID_READ){
-    if (recv(socketfd, (char*)buf, sizeof(buf), 0) < 0) {
+  if (extract_raid_response(ntohll64(op), "REQUEST_TYPE") == RAID_READ) {
+    logMessage(LOG_INFO_LEVEL, "Trying to receive buffer from server!");
+    if (read(socketfd, (char*)buf, sizeof(buf)) != sizeof(buf)) {
       logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
       return -1;
     }
+    logMessage(LOG_INFO_LEVEL, "Buffer read into 'buf'!");
   }
-  
-  logMessage(LOG_INFO_LEVEL, "Buffer received");
+
+  if (extract_raid_response(ntohll64(op), "REQUEST_TYPE") == RAID_WRITE) {
+    logMessage(LOG_INFO_LEVEL, "Trying to write buffer to server!");
+    if (write(socketfd, (char*)buf, sizeof(buf)) != sizeof(buf)) {
+      logMessage(LOG_ERROR_LEVEL, "Buffer send failed!");
+      return -1;
+    }
+    logMessage(LOG_INFO_LEVEL, "Buffer written!");
+  }
+
+  logMessage(LOG_INFO_LEVEL, "Waiting...");
 
 
   op = ntohll64(op);
