@@ -84,6 +84,8 @@ int extract_raid_response(RAIDOpCode resp, char *part) {
     return respOpCode[0];
   } else if (strcmp(part, "DISK_FAIL_CHECK") == 0){
     return respOpCode[5];
+  } else if (strcmp(part, "BLOCKS") == 0){
+    return respOpCode[1];
   }
   return -1;
 }
@@ -150,8 +152,6 @@ RAIDOpCode create_raid_request(uint64_t request_type, uint64_t num_blocks, uint6
 int tagline_driver_init(uint32_t maxlines) {
 
   init_raid_cache(TAGLINE_CACHE_SIZE); 
-
-  establish_connection();
 
   //assign global var 'gmaxlines' to maxlines so that it can be used in raid_disk_signal()
   gmaxLines = maxlines;
