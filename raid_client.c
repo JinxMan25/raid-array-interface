@@ -129,7 +129,7 @@ RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf) {
   if (recvLength != 0) {
 
     logMessage(LOG_INFO_LEVEL, "Trying to receive buffer from server!");
-    if (read(socketfd, (char*)buf, recvLength*blocks) != recvLength*blocks) {
+    if (read(socketfd, buf, recvLength*blocks) != recvLength*blocks) {
       logMessage(LOG_ERROR_LEVEL, "Buffer receive failed!");
       return -1;
     }
