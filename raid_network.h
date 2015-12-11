@@ -17,6 +17,7 @@
 #include <tagline_driver.h>
 
 // Defines
+//
 #define RAID_DEFAULT_IP "127.0.0.1"
 #define RAID_DEFAULT_PORT 19878
 
@@ -24,11 +25,12 @@
 extern unsigned char *raid_network_address;  // Address of RAID server
 extern unsigned short raid_network_port;     // Port of RAID server
 
-//
 // Functional Prototypes
 
 RAIDOpCode client_raid_bus_request(RAIDOpCode op, void *buf);
+
 int establish_connection();
+
 void close_connection();
     // This is the implementation of the client operation (raid_client.c)
 

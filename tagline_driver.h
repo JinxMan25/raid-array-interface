@@ -27,6 +27,8 @@ typedef uint32_t TagLineBlockNumber;
 //
 // Interface functions
 
+int extract_raid_response(RAIDOpCode, char*);
+
 int tagline_driver_init(uint32_t maxlines);
 	// Initialize the driver with a number of maximum lines to process
 

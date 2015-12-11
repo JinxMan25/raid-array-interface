@@ -34,9 +34,7 @@ struct caches {
   int prime;
 };
 
-
 struct caches cache;
-
 
 int check_prime(int num){
   int i, flag=0;
@@ -64,7 +62,6 @@ int check_prime(int num){
 //
 // Inputs       : max_items - the maximum number of items your cache can hold
 // Outputs      : 0 if successful, -1 if failure
-
 int init_raid_cache(uint32_t max_items) {
   int i;
 

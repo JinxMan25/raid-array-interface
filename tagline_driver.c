@@ -52,7 +52,9 @@ struct cache_statistics stats;
 //
 // Inputs       : resp which is of type RAIDOpCode, and buf
 // Outputs      : returns void because it sets values in the global variable
+
 int extract_raid_response(RAIDOpCode resp, char *part) {
+
   uint32_t respOpCode[6];
 
   uint32_t block_ID = resp;
@@ -130,10 +132,15 @@ RAIDOpCode create_raid_request(uint64_t request_type, uint64_t num_blocks, uint6
   RAIDOpCode packedOpCode;
 
   requestType_bits = request_type << 56;
+
   num_block_bits = num_blocks << 48;
+
   disk_number_bits = disk_number << 40;
+
   unused_bits = unused << 33;
+
   status_bits = status << 32;
+
   block_ID_bits = block_ID;
 
   packedOpCode = requestType_bits | num_block_bits | disk_number_bits | unused_bits | status_bits | block_ID_bits;
@@ -170,7 +177,7 @@ int tagline_driver_init(uint32_t maxlines) {
   for (i = 0; i < maxlines; i++) {
     taglines[i].taglineBlocks = malloc(MAX_TAGLINE_BLOCK_NUMBER * sizeof(int*));
     //For each tagline block, dynamically allocation an array of 4 integers. First two will hold primary disk and primary disk block and last two will hold backup disk and backup disk block
-    for (j = 0; j < MAX_TAGLINE_BLOCK_NUMBER; j++){
+    for (j = 0; j < MAX_TAGLINE_BLOCK_NUMBER; j++) {
       taglines[i].taglineBlocks[j] = malloc (4 * sizeof(int));
       taglines[i].taglineBlocks[j][0] = -1;                            //Initialize them to -1 so that when reading through the data structure, program knows whether this taglineblock was written to or not
       taglines[i].taglineBlocks[j][2] = -1;
