@@ -36,22 +36,6 @@ struct caches {
 
 struct caches cache;
 
-int check_prime(int num){
-  int i, flag=0;
-    for (i=2;i <=num/2; ++i) {
-      if (num%i==0) {
-        flag=1;
-        break;
-      }
-    }
-    if (flag==0) {
-      return 1;
-    }
-    else {
-      return -1;
-    }
-}
-
 //
 // TAGLINE Cache interface
 
@@ -74,14 +58,6 @@ int init_raid_cache(uint32_t max_items) {
   }
 
   i = 0;
-
-  while (1) {
-    if (check_prime(max_items - i)) {
-      cache.prime = (max_items - i);
-      break;
-    }
-    i++;
-  }
 
   cache.currentSize = 0; 
   cache.maxSize = max_items; 
@@ -127,49 +103,22 @@ int close_raid_cache(void) {
 // Outputs      : 0 if successful, -1 if failure
 
 int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
+
   int i;
-  int idx;
-  int timeout= 0;
   int low = 999;
   int tracker;
 
-  idx = ((dsk + blk)*(113)) % cache.maxSize;
-
-  //cache eviction, find the least recently used to evict
-  if ((cache.maxSize - cache.currentSize) <= 0){
-    while (1) {
-      if (timeout == cache.maxSize) {
-        logMessage(LOG_ERROR_LEVEL, "Too much clusterting");
-        return -1;
-      }
-      if (cache.blocks[idx].diskId == -1) {
-        cache.blocks[idx].diskId = dsk;
-        cache.blocks[idx].blockId = blk;
-        cache.blocks[idx].accessCounter = cache.lastAccessed;
-        memset(cache.blocks[idx].buf, *(char*)buf, 1024); 
-
-        cache.currentSize++;
-        cache.lastAccessed++;
-        break;
-      } else if (cache.blocks[idx].diskId == dsk && cache.blocks[idx].blockId == blk) {
-        cache.blocks[idx].accessCounter = cache.lastAccessed;
-        memset(cache.blocks[idx].buf, *(char*)buf, 1024); 
-
-        cache.lastAccessed++;
-        break;
-      }
-      idx = idx - ((dsk+blk) % cache.prime);
-      timeout++;
+  //from start to for how ever many writes in the cache, look for disk and block and if found, update lastAccessed member and update the buffer in the cache
+  for (i = 0; i < cache.currentSize; i++) {
+    if (cache.blocks[i].accessCounter < low) {
+      low = cache.blocks[i].accessCounter;                        //keep track of the least accessed so that after this iteration, if there is no space in the cache, just replace the least recently used by using the 'tracker' as the index
+      tracker = i;
     }
-  } else {
-
-    for (i = 0; i < cache.currentSize; i++) {
-      if (cache.blocks[i].accessCounter < low) {
-        low = cache.blocks[i].accessCounter;                        //keep track of the least accessed so that after this iteration, if there is no space in the cache, just replace the least recently used by using the 'tracker' as the index
-        tracker = i;
-      }
+    //if disk and blocks id found in the cache, update the lastAccessed field and copy over the buffer
+    if ((cache.blocks[i].diskId == dsk) && (cache.blocks[i].blockId == blk)) {
+      cache.blocks[i].accessCounter = cache.lastAccessed;
+      memset(cache.blocks[i].buf, *(char*)buf, RAID_BLOCK_SIZE);
     }
-    
   }
 
   // If no item was found in the cache, and if there is space in the cache, just insert the new disk and blocks id into the cache
@@ -177,19 +126,20 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     cache.blocks[cache.currentSize + 1].diskId = dsk;
     cache.blocks[cache.currentSize + 1].blockId = blk;
     cache.blocks[cache.currentSize + 1].accessCounter = cache.lastAccessed;
-    memset(cache.blocks[cache.currentSize + 1].buf, *(char *)buf, 1024);
+    memset(cache.blocks[cache.currentSize + 1].buf, *(char*)buf, RAID_BLOCK_SIZE);
 
     cache.currentSize++;
   } else {                                            // Else, just freakin' replace the least recently used item in the cache!
     cache.blocks[tracker].diskId = dsk;
     cache.blocks[tracker].blockId = dsk;
-    memset(cache.blocks[tracker].buf, *(char *)buf, 1024);
+    memset(cache.blocks[tracker].buf, *(char*)buf, RAID_BLOCK_SIZE);
   }
 
   cache.lastAccessed++;
 
 	// Return successfully
 	return(0);
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
