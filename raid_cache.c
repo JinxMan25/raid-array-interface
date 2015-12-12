@@ -121,8 +121,9 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     }
   }
 
+
   // If no item was found in the cache, and if there is space in the cache, just insert the new disk and blocks id into the cache
-  if ((cache.maxSize - cache.currentSize) > cache.maxSize) {
+  if ((cache.maxSize - cache.currentSize) > 0) {
     cache.blocks[cache.currentSize + 1].diskId = dsk;
     cache.blocks[cache.currentSize + 1].blockId = blk;
     cache.blocks[cache.currentSize + 1].accessCounter = cache.lastAccessed;
@@ -159,7 +160,7 @@ void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk) {
       cache.blocks[i].accessCounter = cache.lastAccessed;
       cache.lastAccessed++;
 
-      return (void *)&cache.blocks[i];
+      return cache.blocks[i].buf;
     }
   }
 

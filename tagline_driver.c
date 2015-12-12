@@ -223,6 +223,7 @@ int tagline_read(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char 
   RAIDOpCode readResp;
   int i;
   int primaryDisk, primaryDiskBlock;
+  char *cacheBuffer;
 
   //For each number of blks, i, access the tagline by 'tab' and taglineblock by 'bnum+i' to fetch primary disk and primary disk block to read from
   for (i=0;i<blks;i++) {
@@ -233,9 +234,19 @@ int tagline_read(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char 
     logMessage(LOG_INFO_LEVEL, "Trying to read Disk : %d  Block: %d", primaryDisk, primaryDiskBlock);
 
     //Call the raid bus to read the buffer into 'buf' in 1024 chunks
-    readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), &buf[i*RAID_BLOCK_SIZE]);
-    if (status_check_helper(readResp, "READ")){
-      return -1;
+     
+    cacheBuffer = get_raid_cache((RAIDDiskID)primaryDisk, (RAIDBlockID)primaryDiskBlock);
+
+    if (cacheBuffer != NULL) {
+      memcpy(&buf[i*RAID_BLOCK_SIZE], cacheBuffer, RAID_BLOCK_SIZE);
+      logMessage(LOG_INFO_LEVEL, "Cache hit");
+    } else {
+      logMessage(LOG_INFO_LEVEL, "Cache miss!");
+      readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), &buf[i*RAID_BLOCK_SIZE]);
+      if (status_check_helper(readResp, "READ")){
+        return -1;
+      }
+      put_raid_cache((RAIDDiskID)primaryDisk, (RAIDBlockID)primaryDiskBlock, &buf[i*RAID_BLOCK_SIZE]);
     }
   }
 
@@ -303,7 +314,7 @@ int raid_disk_signal(){
                 found = 1;
 
                 //if primary disk and block was found, then read from the corresponding backup disk and backup block else just read from corresponding primary disk and block
-                if ((primaryDisk == i) && (primaryDiskBlock == j)){
+                if ((primaryDisk == i) && (primaryDiskBlock == j)) {
                   readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, backUpDisk, 0, 0, backUpDiskBlock), buf);
                 } else {
                   readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), buf);
@@ -370,6 +381,8 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
 
           //Write to the 'currentDisk' and the block that is retrieved by RAID_DISKBLOCKS - disks[currentDisk].currentSize)
           writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, currentDisk, 0, 0, RAID_DISKBLOCKS - disks[currentDisk].currentSize), &buf[i*RAID_BLOCK_SIZE]);
+
+
           logMessage(LOG_INFO_LEVEL, "TAGLINE : wrote %u block(s) to tagline %u, starting block %u. ",
               i, tag, bnum + i);
           logMessage(LOG_INFO_LEVEL, "Fresh write to block in Primary Disk");
@@ -386,12 +399,15 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
           // This is the backup write
           logMessage(LOG_INFO_LEVEL, "Fresh write to block in Backup Disk");
           writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1), 0, 0, RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize), &buf[i*RAID_BLOCK_SIZE]);
+          
+
           if (status_check_helper(writeResOp, "Fresh WRITE to Backup Disk")){
             return -1;
           }  else {
             // This is round robin, so if currentDisk is 16, go to Disk 0 to store backup
             taglines[tag].taglineBlocks[bnum + i][2] = (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1);
             taglines[tag].taglineBlocks[bnum + i][3] = RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize;
+            put_raid_cache((RAIDDiskID)currentDisk+1, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk+1].currentSize), &buf[i*RAID_BLOCK_SIZE]);
           }
 
           //on successfull writes, decrease currentsize of disks that the primary block and backup block was written to so that on the next write, it writes to the next block in 'disks[currentDisk]'
@@ -415,13 +431,16 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
           if (status_check_helper(writeResOp, "Overwrite to Primary disk")){
             return -1;
           } 
+          put_raid_cache((RAIDDiskID)currentDisk, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk].currentSize), &buf[i*RAID_BLOCK_SIZE]);
 
           logMessage(LOG_INFO_LEVEL, "Overwrite to block in Backup Disk");
           //fetch the back up disk and disk block from tagline data structure to overwrite
           writeResOp = client_raid_bus_request(create_raid_request(RAID_WRITE, 1, taglines[tag].taglineBlocks[bnum + i][2], 0, 0, taglines[tag].taglineBlocks[bnum + i][3]), &buf[i*RAID_BLOCK_SIZE]);
+
           if (status_check_helper(writeResOp, "Overwrite to Backup disk")){
             return -1;
           } 
+          put_raid_cache((RAIDDiskID)currentDisk+1, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk+1].currentSize), &buf[i*RAID_BLOCK_SIZE]);
           break;
         }
       }
