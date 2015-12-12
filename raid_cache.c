@@ -169,6 +169,4 @@ void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk) {
 
 }
 
-void rehash(){
-}
 

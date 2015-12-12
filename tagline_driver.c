@@ -15,7 +15,7 @@
 // Project Includes
 #include "raid_bus.h"
 #include "tagline_driver.h"
-#include <raid_cache.h>
+#include "raid_cache.h"
 #include <raid_network.h>
 
 struct cache_statistics {
@@ -236,17 +236,21 @@ int tagline_read(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char 
     //Call the raid bus to read the buffer into 'buf' in 1024 chunks
      
     cacheBuffer = get_raid_cache((RAIDDiskID)primaryDisk, (RAIDBlockID)primaryDiskBlock);
+    stats.gets++;
 
     if (cacheBuffer != NULL) {
       memcpy(&buf[i*RAID_BLOCK_SIZE], cacheBuffer, RAID_BLOCK_SIZE);
       logMessage(LOG_INFO_LEVEL, "Cache hit");
+      stats.hits++;
     } else {
       logMessage(LOG_INFO_LEVEL, "Cache miss!");
+      stats.misses++;
       readResp = client_raid_bus_request(create_raid_request(RAID_READ, 1, primaryDisk, 0, 0, primaryDiskBlock), &buf[i*RAID_BLOCK_SIZE]);
       if (status_check_helper(readResp, "READ")){
         return -1;
       }
       put_raid_cache((RAIDDiskID)primaryDisk, (RAIDBlockID)primaryDiskBlock, &buf[i*RAID_BLOCK_SIZE]);
+      stats.inserts++;
     }
   }
 
@@ -393,6 +397,7 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
             taglines[tag].taglineBlocks[bnum + i][0] = currentDisk;
             taglines[tag].taglineBlocks[bnum + i][1] = RAID_DISKBLOCKS - disks[currentDisk].currentSize;
             put_raid_cache((RAIDDiskID)currentDisk, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk].currentSize), &buf[i*RAID_BLOCK_SIZE]);
+            stats.inserts++;
           }
 
 
@@ -407,7 +412,6 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
             // This is round robin, so if currentDisk is 16, go to Disk 0 to store backup
             taglines[tag].taglineBlocks[bnum + i][2] = (currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1);
             taglines[tag].taglineBlocks[bnum + i][3] = RAID_DISKBLOCKS - disks[(currentDisk == (RAID_DISKS - 1)) ? 0 : (currentDisk + 1)].currentSize;
-            put_raid_cache((RAIDDiskID)currentDisk+1, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk+1].currentSize), &buf[i*RAID_BLOCK_SIZE]);
           }
 
           //on successfull writes, decrease currentsize of disks that the primary block and backup block was written to so that on the next write, it writes to the next block in 'disks[currentDisk]'
@@ -432,6 +436,7 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
             return -1;
           } 
           put_raid_cache((RAIDDiskID)currentDisk, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk].currentSize), &buf[i*RAID_BLOCK_SIZE]);
+          stats.inserts++;
 
           logMessage(LOG_INFO_LEVEL, "Overwrite to block in Backup Disk");
           //fetch the back up disk and disk block from tagline data structure to overwrite
@@ -440,7 +445,6 @@ int tagline_write(TagLineNumber tag, TagLineBlockNumber bnum, uint8_t blks, char
           if (status_check_helper(writeResOp, "Overwrite to Backup disk")){
             return -1;
           } 
-          put_raid_cache((RAIDDiskID)currentDisk+1, (RAIDBlockID)(RAID_DISKBLOCKS - disks[currentDisk+1].currentSize), &buf[i*RAID_BLOCK_SIZE]);
           break;
         }
       }
@@ -492,9 +496,17 @@ int tagline_close(void) {
 
   closeResp = client_raid_bus_request(create_raid_request(RAID_CLOSE, 0, 0, 0, 0, 0),NULL);
 
+  logMessage(LOG_OUTPUT_LEVEL, "** Cache statistics **");
+  logMessage(LOG_OUTPUT_LEVEL, "Total cache inserts %ld", stats.inserts);
+  logMessage(LOG_OUTPUT_LEVEL, "Total cache gets %ld", stats.gets);
+  logMessage(LOG_OUTPUT_LEVEL, "Total cache hits %ld", stats.hits);
+  logMessage(LOG_OUTPUT_LEVEL, "Total cache misses %ld", stats.misses);
+  logMessage(LOG_OUTPUT_LEVEL, "Cache efficiency %ld", (float)(stats.hits/stats.gets));
+
   if (status_check_helper(closeResp, "CLOSE")){
     return -1;
   }
+  close_raid_cache();
 
   close_connection();
 

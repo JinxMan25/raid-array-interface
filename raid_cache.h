@@ -32,10 +32,4 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf);
 void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk);
 	// Get an object from the cache (and return it)
 
-int check_prime(int num);
-  // Check whether a number is prime or not for double hashing
-
-void rehash();
-  //re-alloc larger table size for cache
-
 #endif
