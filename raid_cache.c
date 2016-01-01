@@ -50,8 +50,10 @@ struct caches cache;
 int init_raid_cache(uint32_t max_items) {
   int i;
 
+  //initialize the max_iem of codes 
   cache.blocks = malloc(max_items * sizeof(struct block));
 
+  //initialize blockId and diskId 
   for (i = 0; i < max_items; i++) {
     cache.blocks[i].diskId = -1;
     cache.blocks[i].blockId = -1;
@@ -59,6 +61,7 @@ int init_raid_cache(uint32_t max_items) {
 
   i = 0;
 
+  //set problem currentSize to 0 and 
   cache.currentSize = 0; 
   cache.maxSize = max_items; 
 	// Return successfully
@@ -121,7 +124,6 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     }
   }
 
-
   // If no item was found in the cache, and if there is space in the cache, just insert the new disk and blocks id into the cache
   if ((cache.maxSize - cache.currentSize) > 0) {
     cache.blocks[cache.currentSize + 1].diskId = dsk;
@@ -130,7 +132,7 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
     memset(cache.blocks[cache.currentSize + 1].buf, *(char*)buf, RAID_BLOCK_SIZE);
 
     cache.currentSize++;
-  } else {                                            // Else, just freakin' replace the least recently used item in the cache!
+  } else {                // Else, just replace the least recently used item in the cache!
     cache.blocks[tracker].diskId = dsk;
     cache.blocks[tracker].blockId = dsk;
     memset(cache.blocks[tracker].buf, *(char*)buf, RAID_BLOCK_SIZE);
@@ -155,11 +157,15 @@ int put_raid_cache(RAIDDiskID dsk, RAIDBlockID blk, void *buf) {
 void * get_raid_cache(RAIDDiskID dsk, RAIDBlockID blk) {
   int i;
 
+  //for cache size, check if the disk and block is equal to the params sent into this function
   for (i = 0; i < cache.currentSize; i++) {
     if ((cache.blocks[i].diskId == (int)dsk) && (cache.blocks[i].blockId == (int)blk)) {
+
+      //update the counter to the most recent access time
       cache.blocks[i].accessCounter = cache.lastAccessed;
       cache.lastAccessed++;
 
+      //return cache block
       return cache.blocks[i].buf;
     }
   }
